@@ -8,7 +8,7 @@ import (
 // TODO: Implement Continous Rest Days
 // TODO: Generate Weekly Payroll
 
-// struct for the system's default configuration
+// Struct for the system's default configuration
 type defaultConfig struct {
 	daily_salary  float32
 	max_reg_hours int
@@ -17,7 +17,7 @@ type defaultConfig struct {
 	out_time      []string
 }
 
-// struct for the regular rates assuming work hours does not exceed 8 hours
+// Struct for the regular rates assuming work hours does not exceed 8 hours
 type normalMultiplier struct {
 	regular         float32
 	rest            float32
@@ -27,7 +27,7 @@ type normalMultiplier struct {
 	holiday_rest    float32
 }
 
-// struct for the overtime non-night shift rates
+// Struct for the overtime non-night shift rates
 type overtimeMultiplier struct {
 	normal          float32
 	rest            float32
@@ -37,7 +37,7 @@ type overtimeMultiplier struct {
 	holiday_rest    float32
 }
 
-// struct for the overtime night shift rates
+// Struct for the overtime night shift rates
 type overtimeNightshiftMultiplier struct {
 	normal          float32
 	rest            float32
@@ -47,6 +47,7 @@ type overtimeNightshiftMultiplier struct {
 	holiday_rest    float32
 }
 
+// Main function
 func main() {
 	var flag bool = false
 	var dc defaultConfig
@@ -75,7 +76,7 @@ func main() {
 		case 1:
 			flag = true
 			fmt.Println()
-			fmt.Println("Generating Weekly Payroll...")
+			generateWeeklyPayroll(&dc, &nm, &om, &on)
 		case 2:
 			fmt.Println()
 			updateDefaultConfiguration(&dc)
@@ -92,6 +93,59 @@ func main() {
 	}
 }
 
+func generateWeeklyPayroll(dc *defaultConfig, nm *normalMultiplier, om *overtimeMultiplier, on *overtimeNightshiftMultiplier) {
+	fmt.Println("-----------------------------------------")
+	fmt.Println("         GENERATING WEEKLY PAYROLL       ")
+	fmt.Println("-----------------------------------------")
+	fmt.Println()
+
+	//var weekly_salary float32 = 0
+	var out_times = []string{"", "", "", "", "", "", ""}
+
+	// Get Out Time of each employee for each day of the week
+	for i := 0; i < 7; i++ {
+		for {
+			fmt.Print("Day ", i+1, " Out Time: ")
+			fmt.Scanln(&out_times[i])
+
+			if militaryTimeToInt(out_times[i]) < 0 || militaryTimeToInt(out_times[i]) > 24 || len(out_times[i]) != 4 {
+				fmt.Println()
+				fmt.Println("Please enter a valid time.")
+				fmt.Println()
+			} else {
+				break
+			}
+		}
+	}
+
+	// Get Daily Salary Computation
+	for i := 0; i < 7; i++ {
+		fmt.Println()
+		fmt.Println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+		fmt.Println("                  DAY", i+1, "                  ")
+		fmt.Println()
+
+		if militaryTimeToInt(out_times[i]) == militaryTimeToInt(dc.out_time[i]) {
+			// If employees are absent in normal days{
+			if dc.day_type[i] == "Normal Day" {
+				fmt.Println("      Employee is absent on this day")
+				fmt.Println()
+				continue
+				// If emplyees did not work in rest days
+			} else if dc.day_type[i] == "Rest Day" {
+				fmt.Println("Employee did not come to work (Rest Day)")
+			}
+		}
+
+		fmt.Println("Daily Rate:	", dc.daily_salary)
+		fmt.Println("IN Time:	", dc.in_time)
+		fmt.Println("OUT Time:	", dc.out_time)
+		fmt.Println("Day Type:	", dc.day_type)
+	}
+	fmt.Println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+}
+
+// Update System Configuration Menu
 func updateDefaultConfiguration(dc *defaultConfig) {
 	for {
 		fmt.Println("-----------------------------------------")
@@ -150,6 +204,7 @@ func updateDefaultConfiguration(dc *defaultConfig) {
 	}
 }
 
+// Function that updates the daily salary
 func updateSalary(dc *defaultConfig) {
 	var new_salary float32
 
@@ -166,6 +221,7 @@ func updateSalary(dc *defaultConfig) {
 	fmt.Println()
 }
 
+// Function that updates the work hours
 func updateWorkHours(dc *defaultConfig) {
 	var flag bool = false
 	var new_max_reg_hours int
@@ -192,6 +248,7 @@ func updateWorkHours(dc *defaultConfig) {
 	}
 }
 
+// Function that updates the day type
 func updateDayType(dc *defaultConfig) {
 	var chosen_day int
 	var new_day_type int
@@ -238,6 +295,7 @@ func updateDayType(dc *defaultConfig) {
 	dc.day_type[chosen_day-1] = dayTypeToInt(new_day_type)
 }
 
+// Function yhat updates the in and out time
 func updateInOutTime(dc *defaultConfig) {
 	var chosen_day int
 	var new_time string
@@ -264,7 +322,7 @@ func updateInOutTime(dc *defaultConfig) {
 		fmt.Print("New In/Out Time: ")
 		fmt.Scanln(&new_time)
 
-		if militaryTimeToInt(new_time) < 0 || militaryTimeToInt(new_time) > 24 {
+		if militaryTimeToInt(new_time) < 0 || militaryTimeToInt(new_time) > 24 || len(new_time) != 4 {
 			fmt.Println()
 			fmt.Println("Please enter a valid time.")
 			fmt.Println()
@@ -278,6 +336,7 @@ func updateInOutTime(dc *defaultConfig) {
 	dc.out_time[chosen_day-1] = new_time
 }
 
+// Helper function to convert day types to int
 func dayTypeToInt(input int) string {
 	switch input {
 	case 1:
@@ -297,6 +356,7 @@ func dayTypeToInt(input int) string {
 	}
 }
 
+// Helper function to covert military time to int
 func militaryTimeToInt(input string) int {
 
 	hours := (int(input[0]-'0') * 10) + int(input[1]-'0')
@@ -308,6 +368,7 @@ func militaryTimeToInt(input string) int {
 	return -1
 }
 
+// Initializes the structs
 func initializeStruct(dc *defaultConfig, nm *normalMultiplier, om *overtimeMultiplier, on *overtimeNightshiftMultiplier) {
 	dc.daily_salary = 500.00
 	dc.max_reg_hours = 8
