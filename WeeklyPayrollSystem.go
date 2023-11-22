@@ -5,8 +5,8 @@ import (
 )
 
 // NOTE: Update Default Configuration is done
+// NOTE: Debugged Weekly Payroll
 // TODO: Implement Continous Rest Days
-// TODO: Debug Weekly Payroll
 
 // Struct for the system's default configuration
 type defaultConfig struct {
@@ -96,21 +96,18 @@ func main() {
 // Generate Weekly Payroll function
 func generateWeeklyPayroll(dc *defaultConfig, nm *normalMultiplier, om *overtimeMultiplier, on *overtimeNightshiftMultiplier) {
 
-	var salary float32 = 0
 	var weekly_salary float32 = 0
+	var out_times = []string{"", "", "", "", "", "", ""}
 
 	fmt.Println("-----------------------------------------")
 	fmt.Println("         GENERATING WEEKLY PAYROLL       ")
 	fmt.Println("-----------------------------------------")
 	fmt.Println()
 
-	//var weekly_salary float32 = 0
-	var out_times = []string{"", "", "", "", "", "", ""}
-
 	// Get Out Time of each employee for each day of the week
 	for i := 0; i < 7; i++ {
 		for {
-			fmt.Print("Day ", i+1, " Out Time: ")
+			fmt.Print("Day ", i+1, " Out Time:			")
 			fmt.Scanln(&out_times[i])
 
 			if militaryTimeToInt(out_times[i]) < 0 || militaryTimeToInt(out_times[i]) > 24 || len(out_times[i]) != 4 {
@@ -142,15 +139,16 @@ func generateWeeklyPayroll(dc *defaultConfig, nm *normalMultiplier, om *overtime
 			}
 		}
 
-		fmt.Println("Daily Rate:	", dc.daily_salary)
-		fmt.Println("IN Time:	", dc.in_time[i])
-		fmt.Println("OUT Time:	", out_times[i])
-		fmt.Println("Day Type:	", dc.day_type[i])
+		fmt.Println("Daily Rate:		", dc.daily_salary)
+		fmt.Println("IN Time:		", dc.in_time[i])
+		fmt.Println("OUT Time:		", out_times[i])
+		fmt.Println("Day Type:		", dc.day_type[i])
 
 		work_hours := trackWorkingHours(militaryTimeToInt(out_times[i]), militaryTimeToInt(dc.in_time[i]), dc.max_reg_hours)
-		fmt.Println("Night Shift:	", work_hours[0])
-		fmt.Println("Overtime:	", work_hours[1])
-		fmt.Println("Night Shift OT:	", work_hours[2])
+		fmt.Println("Night Shift:		", work_hours[0])
+		fmt.Println("Overtime:		", work_hours[1])
+		fmt.Println("Night Shift OT:		", work_hours[2])
+		var salary float32 = 0
 
 		// Get daily salary
 		salary += dc.daily_salary * nmSalary(*nm, dc.day_type[i])
@@ -173,7 +171,7 @@ func generateWeeklyPayroll(dc *defaultConfig, nm *normalMultiplier, om *overtime
 		weekly_salary += salary
 
 		// Daily salary
-		fmt.Printf("Salary:		%.2f\n\n", salary)
+		fmt.Printf("Salary:			 %.2f\n\n", salary)
 	}
 	fmt.Println("-----------------------------------------")
 	fmt.Println()
@@ -495,7 +493,7 @@ func dayTypeToInt(input int) string {
 	case 3:
 		return "Special Non-Working Day"
 	case 4:
-		return "Special Non-Working  and Rest Day"
+		return "Special Non-Working and Rest Day"
 	case 5:
 		return "Regular Holiday"
 	case 6:
@@ -532,17 +530,17 @@ func initializeStruct(dc *defaultConfig, nm *normalMultiplier, om *overtimeMulti
 	nm.holiday = 2.00         // 200%
 	nm.holiday_rest = 2.60    // 260%
 
-	nm.regular = 1.25         // 125%
-	nm.rest = 1.69            // 169%
-	nm.nonworking = 1.69      // 169%
-	nm.nonworking_rest = 1.95 // 195%
-	nm.holiday = 2.60         // 260%
-	nm.holiday_rest = 3.38    // 338%
+	om.normal = 1.25          // 125%
+	om.rest = 1.69            // 169%
+	om.nonworking = 1.69      // 169%
+	om.nonworking_rest = 1.95 // 195%
+	om.holiday = 2.60         // 260%
+	om.holiday_rest = 3.38    // 338%
 
-	nm.regular = 1.375         // 137.5%
-	nm.rest = 1.859            // 185.9%
-	nm.nonworking = 1.859      // 185.9%
-	nm.nonworking_rest = 2.145 // 214.5%
-	nm.holiday = 2.860         // 286.0%
-	nm.holiday_rest = 3.718    // 371.8%
+	on.normal = 1.375          // 137.5%
+	on.rest = 1.859            // 185.9%
+	on.nonworking = 1.859      // 185.9%
+	on.nonworking_rest = 2.145 // 214.5%
+	on.holiday = 2.860         // 286.0%
+	on.holiday_rest = 3.718    // 371.8%
 }
