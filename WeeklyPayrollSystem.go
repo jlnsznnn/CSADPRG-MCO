@@ -6,7 +6,7 @@ import (
 
 // NOTE: Update Default Configuration is done
 // TODO: Implement Continous Rest Days
-// TODO: Generate Weekly Payroll
+// TODO: Debug Weekly Payroll
 
 // Struct for the system's default configuration
 type defaultConfig struct {
@@ -93,7 +93,12 @@ func main() {
 	}
 }
 
+// Generate Weekly Payroll function
 func generateWeeklyPayroll(dc *defaultConfig, nm *normalMultiplier, om *overtimeMultiplier, on *overtimeNightshiftMultiplier) {
+
+	var salary float32 = 0
+	var weekly_salary float32 = 0
+
 	fmt.Println("-----------------------------------------")
 	fmt.Println("         GENERATING WEEKLY PAYROLL       ")
 	fmt.Println("-----------------------------------------")
@@ -121,7 +126,7 @@ func generateWeeklyPayroll(dc *defaultConfig, nm *normalMultiplier, om *overtime
 	// Get Daily Salary Computation
 	for i := 0; i < 7; i++ {
 		fmt.Println()
-		fmt.Println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+		fmt.Println("-----------------------------------------")
 		fmt.Println("                  DAY", i+1, "                  ")
 		fmt.Println()
 
@@ -131,18 +136,162 @@ func generateWeeklyPayroll(dc *defaultConfig, nm *normalMultiplier, om *overtime
 				fmt.Println("      Employee is absent on this day")
 				fmt.Println()
 				continue
-				// If emplyees did not work in rest days
 			} else if dc.day_type[i] == "Rest Day" {
-				fmt.Println("Employee did not come to work (Rest Day)")
+				fmt.Println("Employee did not come to work")
+				// Will still generate the daily rate, etc...
 			}
 		}
 
 		fmt.Println("Daily Rate:	", dc.daily_salary)
-		fmt.Println("IN Time:	", dc.in_time)
-		fmt.Println("OUT Time:	", dc.out_time)
-		fmt.Println("Day Type:	", dc.day_type)
+		fmt.Println("IN Time:	", dc.in_time[i])
+		fmt.Println("OUT Time:	", out_times[i])
+		fmt.Println("Day Type:	", dc.day_type[i])
+
+		work_hours := trackWorkingHours(militaryTimeToInt(out_times[i]), militaryTimeToInt(dc.in_time[i]), dc.max_reg_hours)
+		fmt.Println("Night Shift:	", work_hours[0])
+		fmt.Println("Overtime:	", work_hours[1])
+		fmt.Println("Night Shift OT:	", work_hours[2])
+
+		// Get daily salary
+		salary += dc.daily_salary * nmSalary(*nm, dc.day_type[i])
+
+		// Get night shift differential
+		if work_hours[0] != 0 {
+			salary += float32(work_hours[0]) * (dc.daily_salary / float32(dc.max_reg_hours)) * 1.10
+		}
+
+		// Get overtime
+		if work_hours[1] != 0 {
+			salary += float32(work_hours[1]) * (dc.daily_salary / float32(dc.max_reg_hours)) * omSalary(*om, dc.day_type[i])
+		}
+
+		// Get nightshift overtime
+		if work_hours[2] != 0 {
+			salary += float32(work_hours[2]) * (dc.daily_salary / float32(dc.max_reg_hours)) * onSalary(*on, dc.day_type[i])
+		}
+
+		weekly_salary += salary
+
+		// Daily salary
+		fmt.Printf("Salary:		%.2f\n\n", salary)
 	}
-	fmt.Println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+	fmt.Println("-----------------------------------------")
+	fmt.Println()
+	fmt.Printf("      TOTAL WEEKLY SALARY: %.2f\n", weekly_salary)
+	fmt.Println()
+	fmt.Println("-----------------------------------------")
+}
+
+// Helper function to track work hours
+func trackWorkingHours(out_time int, in_time int, max_reg_hours int) []int {
+
+	// Shift the clock-out time if it's on the next day
+	if in_time > out_time {
+		out_time += 24
+	}
+
+	working_hours := out_time - in_time
+
+	// Index mapping for tracked hours:
+	// [0] = Night shift differential
+	// [1] = Overtime
+	// [2] = Night shift overtime
+
+	hours_tracked := []int{0, 0, 0}
+
+	// Loop through the hours worked
+	for i := 0; i < working_hours; i++ {
+		// Skip the first hour (considered as break)
+		if i == 0 {
+			in_time++
+			continue
+		}
+
+		// Categorize hours based on the remaining regular and overtime hours
+		if max_reg_hours > 0 { // Check for Night Shift Differential hours
+			switch in_time {
+			case 22, 23, 24, 1, 2, 3, 4, 5, 6:
+				hours_tracked[0]++
+			}
+			max_reg_hours--
+
+		} else { // Check for Overtime and Night Shift Overtime
+			switch in_time {
+			case 1, 2, 3, 4, 5, 6, 22, 23, 24:
+				hours_tracked[2]++ // Night Shift Overtime
+			case 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21:
+				hours_tracked[1]++ // Overtime
+			}
+		}
+
+		// Move to the next hour, reset if it reaches the end of the day (25)
+		in_time++
+		if in_time == 25 {
+			in_time = 1 // Back to the start of the day
+		}
+	}
+	return hours_tracked
+}
+
+// Helper functions as salary multipliers (Normal, Overtime, Overtime Nightshift)
+func nmSalary(nm normalMultiplier, day_type string) float32 {
+	var mult float32
+
+	switch day_type {
+	case "Normal Day":
+		mult = 1.00
+	case "Rest Day":
+		mult = nm.rest
+	case "Special Non-Working Day":
+		mult = nm.nonworking
+	case "Special Non-Working and Rest Day":
+		mult = nm.nonworking_rest
+	case "Regular Holiday":
+		mult = nm.holiday
+	case "Regular Holiday and Rest Day":
+		mult = nm.holiday_rest
+	}
+	return mult
+}
+
+func omSalary(om overtimeMultiplier, day_type string) float32 {
+	var mult float32
+
+	switch day_type {
+	case "Normal Day":
+		mult = om.normal
+	case "Rest Day":
+		mult = om.rest
+	case "Special Non-Working Day":
+		mult = om.nonworking
+	case "Special Non-Working and Rest Day":
+		mult = om.nonworking_rest
+	case "Regular Holiday":
+		mult = om.holiday
+	case "Regular Holiday and Rest Day":
+		mult = om.holiday_rest
+	}
+	return mult
+}
+
+func onSalary(on overtimeNightshiftMultiplier, day_type string) float32 {
+	var mult float32
+
+	switch day_type {
+	case "Normal Day":
+		mult = on.normal
+	case "Rest Day":
+		mult = on.rest
+	case "Special Non-Working Day":
+		mult = on.nonworking
+	case "Special Non-Working and Rest Day":
+		mult = on.nonworking_rest
+	case "Regular Holiday":
+		mult = on.holiday
+	case "Regular Holiday and Rest Day":
+		mult = on.holiday_rest
+	}
+	return mult
 }
 
 // Update System Configuration Menu
@@ -376,7 +525,7 @@ func initializeStruct(dc *defaultConfig, nm *normalMultiplier, om *overtimeMulti
 	dc.in_time = []string{"0900", "0900", "0900", "0900", "0900", "0900", "0900"}
 	dc.out_time = dc.in_time[:] // copy in time slice since in time and out time of the 7 days is 0900 (system's default configuration)
 
-	nm.regular = 1.30         // NOTE: need to clarify to sir
+	nm.regular = 1.00         // REGULAR SALARY
 	nm.rest = 1.30            // 130%
 	nm.nonworking = 1.30      // 130%
 	nm.nonworking_rest = 1.50 // 150%
