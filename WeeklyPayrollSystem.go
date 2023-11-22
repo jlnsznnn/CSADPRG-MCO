@@ -4,10 +4,6 @@ import (
 	"fmt"
 )
 
-// NOTE: Update Default Configuration is done
-// NOTE: Debugged Weekly Payroll
-// TODO: Implement Continous Rest Days
-
 // Struct for the system's default configuration
 type defaultConfig struct {
 	daily_salary  float32
@@ -541,7 +537,7 @@ func militaryTimeToInt(input string) int {
 func initializeStruct(dc *defaultConfig, nm *normalMultiplier, om *overtimeMultiplier, on *overtimeNightshiftMultiplier) {
 	dc.daily_salary = 500.00
 	dc.max_reg_hours = 8
-	dc.day_type = []string{"Normal Day", "Normal Day", "Normal Day", "Normal Day", "Normal Day", "Normal Day", "Normal Day"}
+	dc.day_type = []string{"Normal Day", "Normal Day", "Normal Day", "Normal Day", "Normal Day", "Rest Day", "Rest Day"}
 	dc.in_time = []string{"0900", "0900", "0900", "0900", "0900", "0900", "0900"}
 	dc.out_time = dc.in_time[:] // copy in time slice since in time and out time of the 7 days is 0900 (system's default configuration)
 
