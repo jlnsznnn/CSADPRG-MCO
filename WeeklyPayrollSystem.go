@@ -74,7 +74,6 @@ func main() {
 
 		switch choice {
 		case 1:
-			flag = true
 			fmt.Println()
 			generateWeeklyPayroll(&dc, &nm, &om, &on)
 		case 2:
@@ -98,86 +97,109 @@ func generateWeeklyPayroll(dc *defaultConfig, nm *normalMultiplier, om *overtime
 
 	var weekly_salary float32 = 0
 	var out_times = []string{"", "", "", "", "", "", ""}
+	for {
+		fmt.Println("-----------------------------------------")
+		fmt.Println("         GENERATING WEEKLY PAYROLL       ")
+		fmt.Println("-----------------------------------------")
+		fmt.Println()
 
-	fmt.Println("-----------------------------------------")
-	fmt.Println("         GENERATING WEEKLY PAYROLL       ")
-	fmt.Println("-----------------------------------------")
-	fmt.Println()
+		// Get Out Time of each employee for each day of the week
+		for i := 0; i < 7; i++ {
+			for {
+				fmt.Print("Day ", i+1, " Out Time:			")
+				fmt.Scanln(&out_times[i])
 
-	// Get Out Time of each employee for each day of the week
-	for i := 0; i < 7; i++ {
-		for {
-			fmt.Print("Day ", i+1, " Out Time:			")
-			fmt.Scanln(&out_times[i])
-
-			if militaryTimeToInt(out_times[i]) < 0 || militaryTimeToInt(out_times[i]) > 24 || len(out_times[i]) != 4 {
-				fmt.Println()
-				fmt.Println("Please enter a valid time.")
-				fmt.Println()
-			} else {
-				break
+				if militaryTimeToInt(out_times[i]) < 0 || militaryTimeToInt(out_times[i]) > 24 || len(out_times[i]) != 4 {
+					fmt.Println()
+					fmt.Println("Please enter a valid time.")
+					fmt.Println()
+				} else {
+					break
+				}
 			}
 		}
-	}
 
-	// Get Daily Salary Computation
-	for i := 0; i < 7; i++ {
+		// Get Daily Salary Computation
+		for i := 0; i < 7; i++ {
+			fmt.Println()
+			fmt.Println("-----------------------------------------")
+			fmt.Println("                  DAY", i+1, "                  ")
+			fmt.Println()
+
+			if militaryTimeToInt(out_times[i]) == militaryTimeToInt(dc.out_time[i]) {
+				// If employees are absent in normal days{
+				if dc.day_type[i] == "Normal Day" {
+					fmt.Println("      Employee is absent on this day")
+					fmt.Println()
+					continue
+				} else if dc.day_type[i] == "Rest Day" {
+					fmt.Println("Employee did not come to work")
+					// Will still generate the daily rate, etc...
+				}
+			}
+
+			fmt.Println("Daily Rate:		", dc.daily_salary)
+			fmt.Println("IN Time:		", dc.in_time[i])
+			fmt.Println("OUT Time:		", out_times[i])
+			fmt.Println("Day Type:		", dc.day_type[i])
+
+			work_hours := trackWorkingHours(militaryTimeToInt(out_times[i]), militaryTimeToInt(dc.in_time[i]), dc.max_reg_hours)
+			fmt.Println("Night Shift:		", work_hours[0])
+			fmt.Println("Overtime:		", work_hours[1])
+			fmt.Println("Night Shift OT:		", work_hours[2])
+			var salary float32 = 0
+
+			// Get daily salary
+			salary += dc.daily_salary * nmSalary(*nm, dc.day_type[i])
+
+			// Get night shift differential
+			if work_hours[0] != 0 {
+				salary += float32(work_hours[0]) * (dc.daily_salary / float32(dc.max_reg_hours)) * 1.10
+			}
+
+			// Get overtime
+			if work_hours[1] != 0 {
+				salary += float32(work_hours[1]) * (dc.daily_salary / float32(dc.max_reg_hours)) * omSalary(*om, dc.day_type[i])
+			}
+
+			// Get nightshift overtime
+			if work_hours[2] != 0 {
+				salary += float32(work_hours[2]) * (dc.daily_salary / float32(dc.max_reg_hours)) * onSalary(*on, dc.day_type[i])
+			}
+
+			weekly_salary += salary
+
+			// Daily salary
+			fmt.Printf("Salary:			 %.2f\n\n", salary)
+		}
+		fmt.Println("-----------------------------------------")
+		fmt.Println()
+		fmt.Printf("      TOTAL WEEKLY SALARY: %.2f\n", weekly_salary)
 		fmt.Println()
 		fmt.Println("-----------------------------------------")
-		fmt.Println("                  DAY", i+1, "                  ")
+
+		fmt.Println()
+		fmt.Println("[1] Continue")
+		fmt.Println("[2] Exit")
+
+		var exitChoice int
+		fmt.Println()
+		fmt.Print("Enter your choice: ")
+		fmt.Scanln(&exitChoice)
 		fmt.Println()
 
-		if militaryTimeToInt(out_times[i]) == militaryTimeToInt(dc.out_time[i]) {
-			// If employees are absent in normal days{
-			if dc.day_type[i] == "Normal Day" {
-				fmt.Println("      Employee is absent on this day")
-				fmt.Println()
-				continue
-			} else if dc.day_type[i] == "Rest Day" {
-				fmt.Println("Employee did not come to work")
-				// Will still generate the daily rate, etc...
-			}
+		switch exitChoice {
+		case 1:
+			continue
+		case 2:
+			fmt.Println("(!) Redirecting to Main Menu")
+			return
+		default:
+			fmt.Println("(!) Please enter a valid option")
+			fmt.Println()
+			continue
 		}
-
-		fmt.Println("Daily Rate:		", dc.daily_salary)
-		fmt.Println("IN Time:		", dc.in_time[i])
-		fmt.Println("OUT Time:		", out_times[i])
-		fmt.Println("Day Type:		", dc.day_type[i])
-
-		work_hours := trackWorkingHours(militaryTimeToInt(out_times[i]), militaryTimeToInt(dc.in_time[i]), dc.max_reg_hours)
-		fmt.Println("Night Shift:		", work_hours[0])
-		fmt.Println("Overtime:		", work_hours[1])
-		fmt.Println("Night Shift OT:		", work_hours[2])
-		var salary float32 = 0
-
-		// Get daily salary
-		salary += dc.daily_salary * nmSalary(*nm, dc.day_type[i])
-
-		// Get night shift differential
-		if work_hours[0] != 0 {
-			salary += float32(work_hours[0]) * (dc.daily_salary / float32(dc.max_reg_hours)) * 1.10
-		}
-
-		// Get overtime
-		if work_hours[1] != 0 {
-			salary += float32(work_hours[1]) * (dc.daily_salary / float32(dc.max_reg_hours)) * omSalary(*om, dc.day_type[i])
-		}
-
-		// Get nightshift overtime
-		if work_hours[2] != 0 {
-			salary += float32(work_hours[2]) * (dc.daily_salary / float32(dc.max_reg_hours)) * onSalary(*on, dc.day_type[i])
-		}
-
-		weekly_salary += salary
-
-		// Daily salary
-		fmt.Printf("Salary:			 %.2f\n\n", salary)
 	}
-	fmt.Println("-----------------------------------------")
-	fmt.Println()
-	fmt.Printf("      TOTAL WEEKLY SALARY: %.2f\n", weekly_salary)
-	fmt.Println()
-	fmt.Println("-----------------------------------------")
 }
 
 // Helper function to track work hours
